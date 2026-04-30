@@ -21,7 +21,19 @@ export function useAquariumProgram() {
 
   const allFish = useQuery({
     queryKey: ['aquarium', 'all-fish', { cluster }],
-    queryFn: () => program.account.fish.all(),
+    queryFn: async () => {
+      const accounts = await connection.getProgramAccounts(programId)
+      const valid = []
+      for (const { pubkey, account } of accounts) {
+        try {
+          const decoded = program.coder.accounts.decode('fish', account.data)
+          valid.push({ publicKey: pubkey, account: decoded })
+        } catch {
+          // Skip old accounts with incompatible layout
+        }
+      }
+      return valid
+    },
   })
 
   const getProgramAccount = useQuery({
@@ -32,6 +44,11 @@ export function useAquariumProgram() {
   const myFishCount = useMemo(() => {
     if (!allFish.data || !publicKey) return 0
     return allFish.data.filter((f) => f.account.owner.toBase58() === publicKey.toBase58()).length
+  }, [allFish.data, publicKey])
+
+  const myFish = useMemo(() => {
+    if (!allFish.data || !publicKey) return []
+    return allFish.data.filter((f) => f.account.owner.toBase58() === publicKey.toBase58())
   }, [allFish.data, publicKey])
 
   const mintFish = useMutation({
@@ -65,11 +82,6 @@ export function useAquariumProgram() {
       toast.error('Failed to mint fish', { description: msg })
     },
   })
-
-  const myFish = useMemo(() => {
-    if (!allFish.data || !publicKey) return []
-    return allFish.data.filter((f) => f.account.owner.toBase58() === publicKey.toBase58())
-  }, [allFish.data, publicKey])
 
   const breedFish = useMutation({
     mutationKey: ['aquarium', 'breed', { cluster }],
@@ -108,6 +120,30 @@ export function useAquariumProgram() {
     },
   })
 
+  const transferFish = useMutation({
+    mutationKey: ['aquarium', 'transfer', { cluster }],
+    mutationFn: async ({ fishKey, newOwner }: { fishKey: PublicKey; newOwner: PublicKey }) => {
+      if (!publicKey) throw new Error('Wallet not connected')
+      return program.methods
+        .transferFish(newOwner)
+        .accounts({ fish: fishKey })
+        .rpc({ skipPreflight: true, commitment: 'confirmed' })
+    },
+    onSuccess: (signature) => {
+      transactionToast(signature)
+      allFish.refetch()
+    },
+    onError: (error) => {
+      const msg = `${error}`
+      if (msg.includes('already been processed')) {
+        toast.success('Fish transferred!')
+        allFish.refetch()
+        return
+      }
+      toast.error('Failed to transfer', { description: msg })
+    },
+  })
+
   return {
     program,
     programId,
@@ -115,6 +151,7 @@ export function useAquariumProgram() {
     getProgramAccount,
     mintFish,
     breedFish,
+    transferFish,
     myFishCount,
     myFish,
   }
@@ -124,7 +161,7 @@ export function useFishAccount({ fishKey }: { fishKey: PublicKey }) {
   const { cluster } = useCluster()
   const { publicKey } = useWallet()
   const transactionToast = useTransactionToast()
-  const { program, programId, allFish } = useAquariumProgram()
+  const { program, allFish } = useAquariumProgram()
 
   const fishQuery = useQuery({
     queryKey: ['aquarium', 'fish', { cluster, fishKey: fishKey.toBase58() }],
@@ -145,9 +182,13 @@ export function useFishAccount({ fishKey }: { fishKey: PublicKey }) {
     onError: (error) => {
       const msg = `${error}`
       if (msg.includes('already been processed')) {
-        toast.success('Fish already fed!')
+        toast.success('Fish fed!')
         fishQuery.refetch()
         allFish.refetch()
+        return
+      }
+      if (msg.includes('FishDead')) {
+        toast.error('This fish has died — fully grown fish perish after 2 days without food')
         return
       }
       toast.error('Failed to feed fish', { description: msg })

@@ -1,6 +1,5 @@
 'use client'
 
-import { ThemeProvider } from './theme-provider'
 import { Toaster } from './ui/sonner'
 import { AppHeader } from '@/components/app-header'
 import React from 'react'
@@ -16,10 +15,10 @@ export function AppLayout({
   links: { label: string; path: string }[]
 }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <div className="flex flex-col min-h-screen">
+    <>
+      <div className="flex flex-col min-h-dvh bg-background">
         <AppHeader links={links} />
-        <main className="flex-grow container mx-auto p-4">
+        <main className="flex-1 w-full max-w-6xl mx-auto py-6 px-4">
           <ClusterChecker>
             <AccountChecker />
           </ClusterChecker>
@@ -27,7 +26,7 @@ export function AppLayout({
         </main>
         <AppFooter />
       </div>
-      <Toaster />
-    </ThemeProvider>
+      <Toaster position="bottom-right" />
+    </>
   )
 }

@@ -2,22 +2,12 @@
 
 use anchor_lang::prelude::*;
 
-// Placeholder program ID — `anchor keys sync` will overwrite this
-// with the real keypair-derived address after the first build.
 declare_id!("Hb9mNuHBMNapZ6aewU6a3HKNnJ2nYhMxrhZHM43YKNTo");
 
 #[program]
 pub mod aquarium {
     use super::*;
 
-    /// Mints a new Fish PDA for the signer.
-    ///
-    /// `nonce` lets one wallet own multiple fish — the PDA seeds are
-    /// `[b"fish", owner, nonce]` so each (owner, nonce) is unique.
-    ///
-    /// Traits are pseudo-random: derived from the Clock sysvar's
-    /// timestamp + slot. NOT cryptographically random — fine for a
-    /// hackathon, do not use this pattern in production code.
     pub fn mint_fish(ctx: Context<MintFish>, nonce: u8) -> Result<()> {
         let fish = &mut ctx.accounts.fish;
         let clock = Clock::get()?;
@@ -33,22 +23,39 @@ pub mod aquarium {
         fish.last_fed = clock.unix_timestamp;
         fish.nonce    = nonce;
         fish.bump     = ctx.bumps.fish;
+        fish.growth   = 0;
 
         Ok(())
     }
 
-    /// Updates `last_fed` to the current timestamp.
-    /// Only the fish's owner can feed it.
     pub fn feed(ctx: Context<Feed>) -> Result<()> {
         let fish = &mut ctx.accounts.fish;
         let clock = Clock::get()?;
+
+        // Already dead — no point feeding
+        if fish.growth >= 255 && (clock.unix_timestamp - fish.last_fed) >= 172_800 {
+            return err!(AquariumError::FishDead);
+        }
+
+        // Overfeeding a fully grown fish kills it instantly
+        if fish.growth >= 255 {
+            fish.last_fed = 0;
+            msg!("Fish overfed — it has died!");
+            return Ok(());
+        }
+
         fish.last_fed = clock.unix_timestamp;
+        fish.growth = fish.growth.saturating_add(25);
+
         Ok(())
     }
 
-    /// Breeds two fish owned by the signer to create a child.
-    /// Both parents must be well-fed (fed within the last 24h).
-    /// Child traits are a mix of parents + Clock entropy.
+    pub fn transfer_fish(ctx: Context<TransferFish>, new_owner: Pubkey) -> Result<()> {
+        let fish = &mut ctx.accounts.fish;
+        fish.owner = new_owner;
+        Ok(())
+    }
+
     pub fn breed(ctx: Context<Breed>, child_nonce: u8) -> Result<()> {
         let clock = Clock::get()?;
         let now = clock.unix_timestamp;
@@ -56,7 +63,6 @@ pub mod aquarium {
         let parent_a = &ctx.accounts.parent_a;
         let parent_b = &ctx.accounts.parent_b;
 
-        // Both parents must be fed within 24h
         require!(
             now - parent_a.last_fed < 86400,
             AquariumError::ParentStarving
@@ -70,7 +76,6 @@ pub mod aquarium {
 
         let child = &mut ctx.accounts.child;
         child.owner   = ctx.accounts.owner.key();
-        // Mix parent traits: average + small random jitter
         child.species = if seed & 1 == 0 { parent_a.species } else { parent_b.species };
         child.color   = if seed & 2 == 0 { parent_a.color } else { parent_b.color };
         child.speed   = (((parent_a.speed as u16 + parent_b.speed as u16) / 2) as u8)
@@ -81,6 +86,7 @@ pub mod aquarium {
         child.last_fed = now;
         child.nonce    = child_nonce;
         child.bump     = ctx.bumps.child;
+        child.growth   = 0;
 
         Ok(())
     }
@@ -92,8 +98,6 @@ pub struct MintFish<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// PDA: [b"fish", owner, nonce]. `init` allocates space and pays rent
-    /// from `owner`. `bump` is auto-found and stored in the account.
     #[account(
         init,
         payer = owner,
@@ -116,6 +120,14 @@ pub struct Feed<'info> {
         bump = fish.bump,
         has_one = owner,
     )]
+    pub fish: Account<'info, Fish>,
+}
+
+#[derive(Accounts)]
+pub struct TransferFish<'info> {
+    pub owner: Signer<'info>,
+
+    #[account(mut, has_one = owner)]
     pub fish: Account<'info, Fish>,
 }
 
@@ -147,22 +159,21 @@ pub struct Breed<'info> {
 pub enum AquariumError {
     #[msg("Parent fish is starving — feed it before breeding")]
     ParentStarving,
+    #[msg("Fish has died — fully grown fish perish after 2 days without food")]
+    FishDead,
 }
 
-/// Fixed-size Fish account.
-/// `InitSpace` derive computes the on-chain size automatically — saves
-/// you from the classic `AccountDidNotDeserialize` math errors.
 #[account]
 #[derive(InitSpace)]
 pub struct Fish {
-    pub owner: Pubkey,    // 32 bytes — wallet that minted this fish
+    pub owner: Pubkey,    // 32
     pub species: u8,      //  1
     pub color: u8,        //  1
-    pub speed: u8,        //  1 — affects swim animation in the frontend
-    pub size: u8,         //  1 — affects render scale
-    pub born_at: i64,     //  8 — unix timestamp at mint
-    pub last_fed: i64,    //  8 — updated by feed() (Day 2)
-    pub nonce: u8,        //  1 — distinguishes multiple fish per owner
-    pub bump: u8,         //  1 — saved bump for re-derivation
+    pub speed: u8,        //  1
+    pub size: u8,         //  1
+    pub born_at: i64,     //  8
+    pub last_fed: i64,    //  8
+    pub nonce: u8,        //  1
+    pub bump: u8,         //  1
+    pub growth: u8,       //  1 — increments by 25 per feed, caps at 255
 }
-// On-chain size: 8 (discriminator) + 32 + 6×1 + 2×8 = 62 bytes

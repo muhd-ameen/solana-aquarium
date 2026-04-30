@@ -38,6 +38,7 @@ describe('aquarium', () => {
     expect(fish.color).toBeLessThanOrEqual(7)
     expect(fish.bornAt.toNumber()).toBeGreaterThan(0)
     expect(fish.lastFed.toNumber()).toEqual(fish.bornAt.toNumber())
+    expect(fish.growth).toEqual(0)
   })
 
   it('mints a second fish with nonce 1 (same owner)', async () => {
@@ -56,6 +57,7 @@ describe('aquarium', () => {
     const fish = await program.account.fish.fetch(fishKey)
     expect(fish.owner.toBase58()).toEqual(payer.publicKey.toBase58())
     expect(fish.nonce).toEqual(1)
+    expect(fish.growth).toEqual(0)
   })
 
   it('rejects duplicate mint (same owner + nonce)', async () => {
@@ -74,11 +76,12 @@ describe('aquarium', () => {
     ).rejects.toThrow()
   })
 
-  it('feeds a fish (updates last_fed)', async () => {
+  it('feeds a fish — updates last_fed and increments growth', async () => {
     const nonce = 0
     const [fishKey] = fishPDA(payer.publicKey, nonce)
 
     const before = await program.account.fish.fetch(fishKey)
+    expect(before.growth).toEqual(0)
 
     await new Promise((r) => setTimeout(r, 1500))
 
@@ -89,6 +92,7 @@ describe('aquarium', () => {
 
     const after = await program.account.fish.fetch(fishKey)
     expect(after.lastFed.toNumber()).toBeGreaterThanOrEqual(before.lastFed.toNumber())
+    expect(after.growth).toEqual(25)
   })
 
   it('breeds two fish into a child', async () => {
@@ -111,15 +115,26 @@ describe('aquarium', () => {
     const child = await program.account.fish.fetch(childKey)
     expect(child.owner.toBase58()).toEqual(payer.publicKey.toBase58())
     expect(child.nonce).toEqual(childNonce)
-    expect(child.bornAt.toNumber()).toBeGreaterThan(0)
+    expect(child.growth).toEqual(0)
+  })
+
+  it('transfers a fish to another wallet', async () => {
+    const nonce = 2
+    const [fishKey] = fishPDA(payer.publicKey, nonce)
+
+    const recipient = anchor.web3.Keypair.generate()
+
+    await program.methods
+      .transferFish(recipient.publicKey)
+      .accounts({ owner: payer.publicKey, fish: fishKey })
+      .rpc()
+
+    const fish = await program.account.fish.fetch(fishKey)
+    expect(fish.owner.toBase58()).toEqual(recipient.publicKey.toBase58())
   })
 
   it('fetches all fish with getProgramAccounts', async () => {
     const allFish = await program.account.fish.all()
     expect(allFish.length).toBeGreaterThanOrEqual(3)
-
-    for (const f of allFish) {
-      expect(f.account.owner.toBase58()).toEqual(payer.publicKey.toBase58())
-    }
   })
 })

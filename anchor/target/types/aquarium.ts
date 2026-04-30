@@ -15,11 +15,6 @@ export type Aquarium = {
   "instructions": [
     {
       "name": "breed",
-      "docs": [
-        "Breeds two fish owned by the signer to create a child.",
-        "Both parents must be well-fed (fed within the last 24h).",
-        "Child traits are a mix of parents + Clock entropy."
-      ],
       "discriminator": [
         215,
         166,
@@ -64,10 +59,6 @@ export type Aquarium = {
     },
     {
       "name": "feed",
-      "docs": [
-        "Updates `last_fed` to the current timestamp.",
-        "Only the fish's owner can feed it."
-      ],
       "discriminator": [
         46,
         213,
@@ -95,16 +86,6 @@ export type Aquarium = {
     },
     {
       "name": "mintFish",
-      "docs": [
-        "Mints a new Fish PDA for the signer.",
-        "",
-        "`nonce` lets one wallet own multiple fish — the PDA seeds are",
-        "`[b\"fish\", owner, nonce]` so each (owner, nonce) is unique.",
-        "",
-        "Traits are pseudo-random: derived from the Clock sysvar's",
-        "timestamp + slot. NOT cryptographically random — fine for a",
-        "hackathon, do not use this pattern in production code."
-      ],
       "discriminator": [
         143,
         130,
@@ -123,10 +104,6 @@ export type Aquarium = {
         },
         {
           "name": "fish",
-          "docs": [
-            "PDA: [b\"fish\", owner, nonce]. `init` allocates space and pays rent",
-            "from `owner`. `bump` is auto-found and stored in the account."
-          ],
           "writable": true
         },
         {
@@ -138,6 +115,38 @@ export type Aquarium = {
         {
           "name": "nonce",
           "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "transferFish",
+      "discriminator": [
+        152,
+        33,
+        97,
+        135,
+        196,
+        37,
+        237,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "fish"
+          ]
+        },
+        {
+          "name": "fish",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "newOwner",
+          "type": "pubkey"
         }
       ]
     }
@@ -162,16 +171,16 @@ export type Aquarium = {
       "code": 6000,
       "name": "parentStarving",
       "msg": "Parent fish is starving — feed it before breeding"
+    },
+    {
+      "code": 6001,
+      "name": "fishDead",
+      "msg": "Fish has died — fully grown fish perish after 2 days without food"
     }
   ],
   "types": [
     {
       "name": "fish",
-      "docs": [
-        "Fixed-size Fish account.",
-        "`InitSpace` derive computes the on-chain size automatically — saves",
-        "you from the classic `AccountDidNotDeserialize` math errors."
-      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -209,6 +218,10 @@ export type Aquarium = {
           },
           {
             "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "growth",
             "type": "u8"
           }
         ]

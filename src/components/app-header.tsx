@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Menu, X } from 'lucide-react'
-import { ThemeSelect } from '@/components/theme-select'
 import { ClusterUiSelect } from './cluster/cluster-ui'
 import { WalletButton } from '@/components/solana/solana-provider'
 
@@ -17,58 +16,59 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
   }
 
   return (
-    <header className="relative z-50 px-4 py-2 bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-400">
-      <div className="mx-auto flex justify-between items-center">
-        <div className="flex items-baseline gap-4">
-          <Link className="text-xl font-semibold hover:text-neutral-500 dark:hover:text-white" href="/">
-            🐠 Aquarium
+    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto max-w-6xl flex justify-between items-center px-4 h-14">
+        <div className="flex items-center gap-6">
+          <Link className="flex items-center gap-2 font-semibold text-lg tracking-tight hover:opacity-80 transition-opacity" href="/">
+            <span className="text-xl">🐠</span>
+            <span>Aquarium</span>
           </Link>
-          <div className="hidden md:flex items-center">
-            <ul className="flex gap-4 flex-nowrap items-center">
-              {links.map(({ label, path }) => (
-                <li key={path}>
-                  <Link
-                    className={`hover:text-neutral-500 dark:hover:text-white ${isActive(path) ? 'text-neutral-500 dark:text-white' : ''}`}
-                    href={path}
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <nav className="hidden md:flex items-center gap-1">
+            {links.map(({ label, path }) => (
+              <Link
+                key={path}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  isActive(path)
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                }`}
+                href={path}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMenu(!showMenu)}>
-          {showMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {showMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
 
-        <div className="hidden md:flex items-center gap-4">
-          <WalletButton />
+        <div className="hidden md:flex items-center gap-2">
           <ClusterUiSelect />
-          <ThemeSelect />
+          <WalletButton />
         </div>
 
         {showMenu && (
-          <div className="md:hidden fixed inset-x-0 top-[52px] bottom-0 bg-neutral-100/95 dark:bg-neutral-900/95 backdrop-blur-sm">
-            <div className="flex flex-col p-4 gap-4 border-t dark:border-neutral-800">
-              <ul className="flex flex-col gap-4">
-                {links.map(({ label, path }) => (
-                  <li key={path}>
-                    <Link
-                      className={`hover:text-neutral-500 dark:hover:text-white block text-lg py-2  ${isActive(path) ? 'text-neutral-500 dark:text-white' : ''} `}
-                      href={path}
-                      onClick={() => setShowMenu(false)}
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-col gap-4">
-                <WalletButton />
+          <div className="md:hidden fixed inset-x-0 top-14 bottom-0 bg-background/95 backdrop-blur-xl">
+            <div className="flex flex-col p-4 gap-3 border-t border-border/50">
+              {links.map(({ label, path }) => (
+                <Link
+                  key={path}
+                  className={`px-3 py-2.5 rounded-lg text-base font-medium transition-colors ${
+                    isActive(path)
+                      ? 'bg-accent text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                  }`}
+                  href={path}
+                  onClick={() => setShowMenu(false)}
+                >
+                  {label}
+                </Link>
+              ))}
+              <div className="flex flex-col gap-3 pt-3 border-t border-border/50">
                 <ClusterUiSelect />
-                <ThemeSelect />
+                <WalletButton />
               </div>
             </div>
           </div>
