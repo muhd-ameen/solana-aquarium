@@ -1,12 +1,12 @@
 [package]
-name = "counter"
+name = "aquarium"
 version = "0.1.0"
-description = "Created with Anchor"
+description = "Solana Aquarium — shared on-chain fish tank"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "counter"
+name = "aquarium"
 
 [features]
 default = []
@@ -23,4 +23,3 @@ anchor-lang = "0.32.1"
 # versions that contain the APIs it uses (store_current_index_checked, resize)
 solana-instructions-sysvar = ">=2.2.2"
 solana-account-info = ">=2.3.0"
-

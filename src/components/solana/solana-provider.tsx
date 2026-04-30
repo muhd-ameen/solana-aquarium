@@ -23,6 +23,7 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
   const { cluster } = useCluster()
   const endpoint = useMemo(() => cluster.endpoint, [cluster])
   const onError = useCallback((error: WalletError) => {
+    if (error.name === 'WalletDisconnectedError') return
     console.error(error)
   }, [])
 

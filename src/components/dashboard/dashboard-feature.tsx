@@ -1,33 +1,25 @@
 import { AppHero } from '@/components/app-hero'
-
-const links: { label: string; href: string }[] = [
-  { label: 'Solana Docs', href: 'https://docs.solana.com/' },
-  { label: 'Solana Faucet', href: 'https://faucet.solana.com/' },
-  { label: 'Solana Cookbook', href: 'https://solana.com/developers/cookbook/' },
-  { label: 'Solana Stack Overflow', href: 'https://solana.stackexchange.com/' },
-  { label: 'Solana Developers GitHub', href: 'https://github.com/solana-developers/' },
-]
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export function DashboardFeature() {
   return (
     <div>
-      <AppHero title="gm" subtitle="Say hi to your new Solana app." />
-      <div className="max-w-xl mx-auto py-6 sm:px-6 lg:px-8 text-center">
-        <div className="space-y-2">
-          <p>Here are some helpful links to get you started.</p>
-          {links.map((link, index) => (
-            <div key={index}>
-              <a
-                href={link.href}
-                className="hover:text-gray-500 dark:hover:text-gray-300"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {link.label}
-              </a>
-            </div>
-          ))}
+      <AppHero
+        title="🐠 Solana Aquarium"
+        subtitle="A shared on-chain fish tank. Every user mints a fish — it lives in everyone's tank, forever."
+      >
+        <div className="flex gap-4 justify-center mt-4">
+          <Link href="/tank">
+            <Button size="lg">Enter the Tank</Button>
+          </Link>
         </div>
+      </AppHero>
+      <div className="max-w-xl mx-auto py-6 text-center space-y-2">
+        <p className="text-muted-foreground">
+          Connect your wallet, mint a fish with random traits, feed it to keep it alive, and watch the community
+          aquarium grow.
+        </p>
       </div>
     </div>
   )

@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-counter = "Count3AcZucFDPSFBAeHkQ6AvttieKUkyJ8HiQGhQwe"
+aquarium = "Hb9mNuHBMNapZ6aewU6a3HKNnJ2nYhMxrhZHM43YKNTo"
 
 [registry]
 url = "https://api.apr.dev"
